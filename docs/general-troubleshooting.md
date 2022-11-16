@@ -444,3 +444,19 @@ kubectl create ns dapr-system
 
 helm install dapr dapr/dapr --namespace dapr-system
 ```
+
+### Scenario 2:
+
+In this scenario you have confirmed that `dapr` is installed properly:
+- `dapr` is installed in the `dapr-system` namespace
+- `dapr` pods are running
+- Workloads that should have the `dapr` sidecar injected are reporting the correct number of containers (e.g. `0/2`)
+
+1. Check to see if the secrets that `dapr` requires are stored correctly
+```bash
+# Get the decoded secret value from the secret store and compare to the expected connection string value
+kubectl get secrets reddog.secrets -n reddog -o json | jq -r '.data."redis-server"' | base64 -d
+kubectl get secrets reddog.secrets -n reddog -o json | jq -r '.data."redis-password"' | base64 -d
+kubectl get secrets reddog.secrets -n reddog -o json | jq -r '.data."sb-connect-string"' | base64 -d
+kubectl get secrets reddog-sql -n reddog -o json | jq -r '.data."reddog-sql"' | base64 -d
+```
