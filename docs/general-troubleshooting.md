@@ -398,4 +398,49 @@
     ```
 
 
+## Workload Crashing/Restarting
 
+### Scenario 1:
+
+In this scenario you'll note that under the "`READY`" column - our pods are reporting `0/1` containers ready and we're in a `CrashBackOffLoop`.  This generally indicates that Dapr is not properly injecting the dapr sidecar container.  We know this because the pod is only reporting a max of 1 container (0/1) in this particular pod(s).  We know that `dapr` needs to be injected as a sidecar so this indicates a problem, since we should be seeing 2 containers (0/2) in the ready column.
+
+```
+kubectl get pods -n reddog
+
+# Example Output:
+NAME                                  READY   STATUS             RESTARTS         AGE
+accounting-service-6f5fb86cb5-sn7zp   0/1     CrashLoopBackoff   1 (23h ago)      24h
+loyalty-service-576897d64b-8ztdm      0/1     CrashLoopBackoff   11 (2d18h ago)   2d18h
+make-line-service-7b97dbb846-k2hn7    0/1     CrashLoopBackoff   11 (2d18h ago)   2d18h
+order-service-59cbf9fc67-h6t4b        0/1     CrashLoopBackoff   0                2d18h
+ui-f4897cd84-hn25m                    0/1     CrashLoopBackoff   0                2d19h
+virtual-customers-79fb6f58bf-8pgvr    0/1     CrashLoopBackoff   0                2d15h
+virtual-worker-c555b4cfc-2cjzg        0/1     CrashLoopBackoff   0                2d18h
+```
+
+To fix this is either:
+1. `dapr` is not installed in `dapr-system` namespace.
+    - *Solution*: Run the dapr install steps in the `app-deployment.yaml`
+```
+kubectl create ns dapr-system
+
+helm install dapr dapr/dapr --namespace dapr-system
+```
+2. `dapr` was previously uninstalled but did not remove the `CRD`s that were installed with it properly
+    - *Solution*: Delete the `crds` belonging to `dapr.io` and reinstall `dapr`
+
+```bash
+# Uninstall current helm deployment
+helm uninstall dapr -n dapr-system
+
+# Remove the any 'left-over' CRDs
+kubectl delete crd components.dapr.io
+kubectl delete crd configurations.dapr.io
+kubectl delete crd resiliencies.dapr.io
+kubectl delete crd subscriptions.dapr.io
+
+# Reinstall a 'fresh' dapr deployment
+kubectl create ns dapr-system
+
+helm install dapr dapr/dapr --namespace dapr-system
+```
